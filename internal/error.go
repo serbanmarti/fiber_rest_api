@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-playground/validator"
 	"github.com/gofiber/fiber/v2"
-	"github.com/labstack/gommon/log"
 )
 
 type (
@@ -19,8 +18,7 @@ type (
 		Message  string
 		Original error
 	}
-	BackendError  customError
-	DatabaseError customError
+	Error customError
 )
 
 const (
@@ -47,23 +45,23 @@ const (
 	ErrBEQPMissing             = "The current request is missing one or more query parameters"
 	ErrBEQPNoRawOnGate         = "The current request is trying to retrieve non-existing raw data on gates"
 
-	ErrDBCursorClose   = "Error occurred while closing the MongoDB cursor"
-	ErrDBCursorIterate = "Error occurred while iterating over the MongoDB cursor"
-	ErrDBDecode        = "Error occurred while decoding MongoDB documents"
-	ErrDBDelete        = "Error occurred while deleting MongoDB documents"
-	ErrDBInsert        = "Error occurred while inserting MongoDB documents"
-	ErrDBQuery         = "Error occurred while querying MongoDB documents"
-	ErrDBUpdate        = "Error occurred while updating MongoDB documents"
-	ErrDBNoData        = "No data found to be grabbed in MongoDB query"
-	ErrDBNoUpdate      = "No data found to be updated in MongoDB query"
+	ErrDBCursorClose   = "Error occurred while closing cursor"
+	ErrDBCursorIterate = "Error occurred while iterating over cursor"
+	ErrDBDecode        = "Error occurred while decoding data"
+	ErrDBDelete        = "Error occurred while deleting data"
+	ErrDBInsert        = "Error occurred while inserting data"
+	ErrDBQuery         = "Error occurred while querying data"
+	ErrDBUpdate        = "Error occurred while updating data"
+	ErrDBNoData        = "No data found to be grabbed in query"
+	ErrDBNoUpdate      = "No data found to be updated in query"
 )
 
 // Create a new BackendError
-func NewBackendError(message string, original error, skip int) *BackendError {
+func NewError(message string, original error, skip int) *Error {
 	// Generate the error location
 	_, file, line, _ := runtime.Caller(skip)
 
-	return &BackendError{
+	return &Error{
 		Location: &errorLocation{
 			File: file,
 			Line: line,
@@ -74,27 +72,7 @@ func NewBackendError(message string, original error, skip int) *BackendError {
 }
 
 // Error function for error interface
-func (e *BackendError) Error() string {
-	return e.Message
-}
-
-// Create a new DatabaseError
-func NewDatabaseError(message string, original error, skip int) *DatabaseError {
-	// Generate the error location
-	_, file, line, _ := runtime.Caller(skip)
-
-	return &DatabaseError{
-		Location: &errorLocation{
-			File: file,
-			Line: line,
-		},
-		Message:  message,
-		Original: original,
-	}
-}
-
-// Error function for error interface
-func (e *DatabaseError) Error() string {
+func (e *Error) Error() string {
 	return e.Message
 }
 
@@ -118,30 +96,10 @@ func ErrorHandler(c *fiber.Ctx, err error) error {
 			message += fmt.Sprintf("field validation for '%s' failed on the '%s' tag;", v.Field(), v.ActualTag())
 		}
 
-	case *BackendError: // Handle a backend error
+	case *Error: // Handle a backend error
 		// Log the error
-		log.Errorf(
+		logDebugErrors(
 			"BackendError :: File:%s - Line:%d :: %s -> %v", e.Location.File, e.Location.Line, e.Message, e.Original,
-		)
-
-		// Construct the response
-		message = e.Message
-
-		switch message {
-		case ErrBEInvalidPassword, ErrBEJwtInvalid, ErrBENotAdmin:
-			code = fiber.StatusUnauthorized
-		case ErrBEEmail, ErrBEHashSalt, ErrBEMongoIDCast, ErrBETimeConversion:
-			code = fiber.StatusInternalServerError
-		case ErrBEInvalidInvite, ErrBEMongoIDEmpty, ErrBEUserExists, ErrBEJwtBad,
-			ErrBEQPInvalidChartType, ErrBEQPInvalidDateTime, ErrBEQPInvalidIsInside, ErrBEQPInvalidIntervalType,
-			ErrBEQPInvalidLocation, ErrBEQPInvalidMobile, ErrBEQPInvalidTimezone, ErrBEQPMissing, ErrBEQPNoRawOnGate:
-			code = fiber.StatusBadRequest
-		}
-
-	case *DatabaseError: // Handle a database error
-		// Log the error
-		log.Errorf(
-			"DatabaseError :: File:%s - Line:%d :: %s -> %v", e.Location.File, e.Location.Line, e.Message, e.Original,
 		)
 
 		// Construct the response
@@ -150,10 +108,21 @@ func ErrorHandler(c *fiber.Ctx, err error) error {
 		switch message {
 		case ErrDBNoData, ErrDBNoUpdate:
 			code = fiber.StatusNotFound
-		case ErrDBCursorClose, ErrDBCursorIterate, ErrDBDecode, ErrDBDelete, ErrDBInsert, ErrDBQuery, ErrDBUpdate:
+		case ErrBEInvalidPassword, ErrBEJwtInvalid, ErrBENotAdmin:
+			code = fiber.StatusUnauthorized
+		case ErrBEEmail, ErrBEHashSalt, ErrBEMongoIDCast, ErrBETimeConversion,
+			ErrDBDecode, ErrDBDelete, ErrDBInsert, ErrDBQuery, ErrDBUpdate,
+			ErrDBCursorClose, ErrDBCursorIterate:
 			code = fiber.StatusInternalServerError
+		case ErrBEInvalidInvite, ErrBEMongoIDEmpty, ErrBEUserExists, ErrBEJwtBad,
+			ErrBEQPInvalidChartType, ErrBEQPInvalidDateTime, ErrBEQPInvalidIsInside, ErrBEQPInvalidIntervalType,
+			ErrBEQPInvalidLocation, ErrBEQPInvalidMobile, ErrBEQPInvalidTimezone, ErrBEQPMissing, ErrBEQPNoRawOnGate:
+			code = fiber.StatusBadRequest
 		}
 	}
+
+	// Log the current request's response
+	LogRequestResponse(code, c.IP(), c.Method(), c.Path(), message)
 
 	// Send the error response
 	if err := c.Status(code).JSON(fiber.Map{
@@ -161,6 +130,8 @@ func ErrorHandler(c *fiber.Ctx, err error) error {
 		"message": message,
 		"data":    nil,
 	}); err != nil {
+		// Should never get here
+		LogRequestResponse(500, c.IP(), c.Method(), c.Path(), "Internal Server Error")
 		return c.Status(500).SendString("Internal Server Error")
 	}
 

@@ -33,7 +33,7 @@ func NewSalt() ([]byte, error) {
 	s := make([]byte, keyLen)
 
 	if _, err := rand.Read(s); err != nil {
-		return nil, internal.NewBackendError(internal.ErrBEHashSalt, nil, 2)
+		return nil, internal.NewError(internal.ErrBEHashSalt, nil, 2)
 	}
 
 	return s, nil

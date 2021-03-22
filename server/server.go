@@ -2,20 +2,20 @@ package server
 
 import (
 	"context"
-	"log"
 	"time"
 
-	"github.com/serbanmarti/fiber_rest_api/database"
-
 	"github.com/gofiber/fiber/v2"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
 
+	"github.com/serbanmarti/fiber_rest_api/database"
 	"github.com/serbanmarti/fiber_rest_api/internal"
 	"github.com/serbanmarti/fiber_rest_api/security"
 	"github.com/serbanmarti/fiber_rest_api/server/handler"
 )
 
 func InitServer() (*fiber.App, int, *mongo.Client) {
+	// Create a new Fiber instance
 	app := fiber.New(fiber.Config{
 		ErrorHandler:          internal.ErrorHandler,
 		Prefork:               false,
@@ -25,7 +25,7 @@ func InitServer() (*fiber.App, int, *mongo.Client) {
 	// Get configuration from environment
 	env, err := internal.GetEnv()
 	if err != nil {
-		log.Fatalf("[FATAL] Failed to get environment variables: %s", err)
+		logrus.Fatalf("Failed to get environment variables: %s", err)
 	}
 
 	// Configure the Fiber instance
@@ -44,7 +44,7 @@ func InitServer() (*fiber.App, int, *mongo.Client) {
 	// Configure the request validator
 	v, err := internal.NewValidator()
 	if err != nil {
-		log.Fatalf("[FATAL] Failed to create request validator: %s", err)
+		logrus.Fatalf("Failed to create request validator: %s", err)
 	}
 
 	// Initialize the route handler

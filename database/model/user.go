@@ -3,13 +3,12 @@ package model
 import (
 	"context"
 
-	"github.com/serbanmarti/fiber_rest_api/security"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/serbanmarti/fiber_rest_api/internal"
+	"github.com/serbanmarti/fiber_rest_api/security"
 )
 
 type (
@@ -20,10 +19,6 @@ type (
 		Salt     []byte             `bson:"salt" json:"-"`
 		Role     string             `bson:"role" json:"role,omitempty" validate:"omitempty,role"`
 		Active   bool               `bson:"active" json:"-"`
-		//CreatedBy    primitive.ObjectID   `bson:"created_by" json:"-"`
-		//CreatedUsers []primitive.ObjectID `bson:"created_users" json:"-"`
-		InviteToken string `bson:"invite_token,omitempty" json:"-"`
-		Token       string `bson:"-" json:"token,omitempty"`
 	}
 )
 
@@ -41,10 +36,10 @@ func UserFind(m *mongo.Database, u *User) error {
 
 	if err := db.FindOne(context.TODO(), bson.M{"email": u.Email}).Decode(&u); err != nil {
 		if err == mongo.ErrNoDocuments {
-			return internal.NewDatabaseError(internal.ErrDBNoData, err, 1)
+			return internal.NewError(internal.ErrDBNoData, err, 1)
 		}
 
-		return internal.NewDatabaseError(internal.ErrDBQuery, err, 1)
+		return internal.NewError(internal.ErrDBQuery, err, 1)
 	}
 
 	// Create the hashed password for the current user
@@ -52,7 +47,7 @@ func UserFind(m *mongo.Database, u *User) error {
 
 	// Check if hashed passwords match
 	if u.Password != hashedPassword {
-		return internal.NewBackendError(internal.ErrBEInvalidPassword, nil, 1)
+		return internal.NewError(internal.ErrBEInvalidPassword, nil, 1)
 	}
 
 	return nil
@@ -65,7 +60,7 @@ func UserFindRoot(m *mongo.Database, email string) (bool, error) {
 
 	count, err := db.CountDocuments(context.TODO(), bson.M{"email": email})
 	if err != nil && err != mongo.ErrNoDocuments {
-		return false, internal.NewDatabaseError(internal.ErrDBQuery, err, 1)
+		return false, internal.NewError(internal.ErrDBQuery, err, 1)
 	}
 
 	if count > 0 {
@@ -83,7 +78,7 @@ func UserCreateRoot(m *mongo.Database, u *User) error {
 	// Add the user to the DB
 	_, err := db.InsertOne(context.TODO(), u)
 	if err != nil {
-		return internal.NewDatabaseError(internal.ErrDBInsert, err, 1)
+		return internal.NewError(internal.ErrDBInsert, err, 1)
 	}
 
 	return nil

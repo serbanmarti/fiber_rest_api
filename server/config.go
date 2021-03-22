@@ -3,11 +3,11 @@ package server
 import (
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+
+	"github.com/serbanmarti/fiber_rest_api/internal"
 )
 
 func configureFiber(app *fiber.App) {
@@ -15,22 +15,17 @@ func configureFiber(app *fiber.App) {
 	app.Use(recover.New())
 
 	// Configure logging
-	//app.Use(logger.New(logger.Config{
-	//	TimeFormat: "2006/01/02 15:04:05",
-	//	Format:     "[${time}] ${status} - ${latency} ${method} ${path}\n",
-	//}))
-
 	app.Use(func(c *fiber.Ctx) (err error) {
 		// Handle request, store err for logging
 		chainErr := c.Next()
 
-		// Format error if exist
+		// Format error if one exists
 		formatErr := ""
 		if chainErr != nil {
-			formatErr = chainErr.Error()
+			return chainErr
 		}
 
-		logrus.Infof("%d - %s - %s", c.Response().StatusCode(), c.Path(), formatErr)
+		internal.LogRequestResponse(c.Response().StatusCode(), c.IP(), c.Method(), c.Path(), formatErr)
 		return nil
 	})
 

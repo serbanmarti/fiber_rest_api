@@ -14,7 +14,9 @@ type (
 )
 
 var (
-	roles = []string{"admin", "user"}
+	roles            = []string{"admin", "user"}
+	errValidatorRole = errors.New("could not assign role validator")
+	errValidatorPass = errors.New("could not assign password validator")
 )
 
 // Create a new input data validator instance
@@ -24,13 +26,13 @@ func NewValidator() (*Validator, error) {
 	// Register role validation
 	err := v.RegisterValidation("role", ValidateRole)
 	if err != nil {
-		return nil, errors.New("could not assign role validator")
+		return nil, errValidatorRole
 	}
 
 	// Register password validation
 	err = v.RegisterValidation("password", ValidatePassword)
 	if err != nil {
-		return nil, errors.New("could not assign password validator")
+		return nil, errValidatorPass
 	}
 
 	return &Validator{validator: v}, nil
@@ -50,7 +52,7 @@ func ValidateRole(f validator.FieldLevel) bool {
 func ValidatePassword(f validator.FieldLevel) bool {
 	s := f.Field().String()
 	return len(s) > 0 &&
-		!strings.Contains(s, " ") //&&
-	//strings.ContainsAny(s, "0123456789") &&
-	//strings.ContainsAny(s, "{}[]:;'\"\\/?.<>,=+-_()!@#$%^&*~`")
+		!strings.Contains(s, " ") &&
+		strings.ContainsAny(s, "0123456789") &&
+		strings.ContainsAny(s, "{}[]:;'\"\\/?.<>,=+-_()!@#$%^&*~`")
 }
