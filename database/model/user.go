@@ -26,7 +26,7 @@ const (
 	usersCollectionName = "users"
 )
 
-// Check if a user is found based on given email and password in the DB
+// UserFind checks if a user is found based on given email and password in the DB
 func UserFind(m *mongo.Database, u *User) error {
 	// Save the raw password for later use
 	rawPassword := u.Password
@@ -53,7 +53,7 @@ func UserFind(m *mongo.Database, u *User) error {
 	return nil
 }
 
-// Check if the root user account is already available in the DB
+// UserFindRoot checks if the root user account is already available in the DB
 func UserFindRoot(m *mongo.Database, email string) (bool, error) {
 	// Create a DB connection
 	db := m.Collection(usersCollectionName)
@@ -70,7 +70,7 @@ func UserFindRoot(m *mongo.Database, email string) (bool, error) {
 	return false, nil
 }
 
-// Create a new root user in the DB
+// UserCreateRoot creates a new root user in the DB
 func UserCreateRoot(m *mongo.Database, u *User) error {
 	// Create a DB connection
 	db := m.Collection(usersCollectionName)

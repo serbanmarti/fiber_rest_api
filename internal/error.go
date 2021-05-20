@@ -56,7 +56,7 @@ const (
 	ErrDBNoUpdate      = "No data found to be updated in query"
 )
 
-// Create a new backend Error
+// NewError creates a new backend Error
 func NewError(message string, original error, skip int) *Error {
 	// Generate the error location
 	_, file, line, _ := runtime.Caller(skip)
@@ -76,7 +76,7 @@ func (e *Error) Error() string {
 	return e.Message
 }
 
-// Error handler with a custom response for the Fiber instance
+// ErrorHandler handles custom error responses for the Fiber instance
 func ErrorHandler(c *fiber.Ctx, err error) error {
 	// Create the default values for response code and message
 	code := fiber.StatusInternalServerError

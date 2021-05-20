@@ -19,7 +19,7 @@ var (
 	errValidatorPass = errors.New("could not assign password validator")
 )
 
-// Create a new input data validator instance
+// NewValidator creates a new input data validator instance
 func NewValidator() (*Validator, error) {
 	v := validator.New()
 

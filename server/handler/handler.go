@@ -18,7 +18,7 @@ type (
 	}
 )
 
-// Return a formatted HTTP Success response
+// HTTPSuccess returns a formatted HTTP Success response
 func HTTPSuccess(c *fiber.Ctx, d interface{}) error {
 	return c.JSON(fiber.Map{
 		"error":   false,
